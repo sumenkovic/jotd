@@ -18,25 +18,21 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: dorny/paths-filter@v2
-        name: Check if score files have been updated
-        id: changes
-        with:
-          filters: |
-            scorefiles:
-              - '**/score.yaml'
-              - '**/humanitec.score.yaml'
-      
+
       - name: Install score-humanitec
-        if: steps.changes.outputs.scorefiles == 'true'
         run: |
-          wget https://github.com/score-spec/score-humanitec/releases/download/0.5.0/score-humanitec_0.5.0_linux_amd64.tar.gz
-          tar -xvf score-humanitec_0.5.0_linux_amd64.tar.gz
+          wget https://github.com/score-spec/score-humanitec/releases/download/0.7.0/score-humanitec_0.7.0_linux_amd64.tar.gz
+          tar -xvf score-humanitec_0.7.0_linux_amd64.tar.gz
           chmod +x score-humanitec
           mv score-humanitec /usr/local/bin
 
       - name: Run Score
-        if: steps.changes.outputs.scorefiles == 'true'
         run: |
-          sed -i -E "s/^(\\s+image:)\\s+.*\$/\\1 'registry.humanitec.io\\/${{ vars.HUMANITEC_ORG }}\\/${GITHUB_REPOSITORY##*/}:${GITHUB_SHA}'/" score.yaml
-          score-humanitec delta --retry --deploy --token ${{ secrets.HUMANITEC_TOKEN }} --org ${{ vars.HUMANITEC_ORG }} --app jotd --env development
+          if [ -f score.yaml ]
+          then 
+            sed -i -E "s/^(\\s+image:)\\s+.*\$/\\1 'registry.humanitec.io\\/${{ vars.HUMANITEC_ORG }}\\/${GITHUB_REPOSITORY##*/}:${GITHUB_SHA}'/" score.yaml
+            score-humanitec delta --retry --deploy --token ${{ secrets.HUMANITEC_TOKEN }} --org ${{ vars.HUMANITEC_ORG }} --app jotd --env development
+          else
+            echo "no score file found, cannot deploy"
+            exit 1
+          fi
